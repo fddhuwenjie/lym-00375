@@ -1,11 +1,15 @@
 import * as repo from '../repositories/taskRepository';
+import * as projectRepo from '../repositories/projectRepository';
 import { computeSchedule, detectCycle } from './scheduler';
-import type { TaskInput, ScheduleResult } from '../../shared/types';
+import type { TaskInput, ScheduleResult, ProjectHealth } from '../../shared/types';
 
-export function getFullSchedule(): ScheduleResult {
-  const tasks = repo.getAllTasks();
+const DEFAULT_PROJECT_ID = 'default';
+
+export function getFullSchedule(projectId: string = DEFAULT_PROJECT_ID): ScheduleResult {
+  const tasks = repo.getAllTasks(projectId);
   const config = repo.getProjectConfig();
-  return computeSchedule(tasks, config.startDate);
+  const project = projectRepo.getProjectById(projectId);
+  return computeSchedule(tasks, config.startDate, project?.calendarId);
 }
 
 function validateDependencies(dependsOn: string[], existingTaskIds: string[], currentTaskId?: string): { invalidIds: string[] } {
@@ -19,8 +23,8 @@ function validateDependencies(dependsOn: string[], existingTaskIds: string[], cu
   return { invalidIds };
 }
 
-export function createTask(input: TaskInput): ScheduleResult {
-  const existingTasks = repo.getAllTasks();
+export function createTask(input: TaskInput, projectId: string = DEFAULT_PROJECT_ID): ScheduleResult {
+  const existingTasks = repo.getAllTasks(projectId);
   const existingIds = existingTasks.map(t => t.id);
   
   const id = input.id || generateTempId(existingTasks);
@@ -40,11 +44,12 @@ export function createTask(input: TaskInput): ScheduleResult {
     throw error;
   }
 
-  repo.createTask({ ...input, id });
-  return getFullSchedule();
+  const inputWithProject = { ...input, id, projectId: input.projectId || projectId };
+  repo.createTask(inputWithProject);
+  return getFullSchedule(projectId);
 }
 
-export function updateTask(id: string, input: TaskInput): ScheduleResult {
+export function updateTask(id: string, input: TaskInput, projectId: string = DEFAULT_PROJECT_ID): ScheduleResult {
   const allTasks = repo.getAllTasks();
   const existingTasks = allTasks.filter(t => t.id !== id);
   const existingIds = allTasks.map(t => t.id);
@@ -64,22 +69,81 @@ export function updateTask(id: string, input: TaskInput): ScheduleResult {
     throw error;
   }
 
-  repo.updateTask(id, input);
-  return getFullSchedule();
+  const inputWithProject = { ...input, projectId: input.projectId || projectId };
+  repo.updateTask(id, inputWithProject);
+  return getFullSchedule(projectId);
 }
 
-export function deleteTask(id: string): ScheduleResult {
+export function updateTaskProgress(id: string, progress: number, projectId: string = DEFAULT_PROJECT_ID): ScheduleResult {
+  repo.updateTaskProgress(id, progress);
+  return getFullSchedule(projectId);
+}
+
+export function deleteTask(id: string, projectId: string = DEFAULT_PROJECT_ID): ScheduleResult {
   repo.deleteTask(id);
-  return getFullSchedule();
+  return getFullSchedule(projectId);
 }
 
 export function getConfig() {
   return repo.getProjectConfig();
 }
 
-export function updateConfig(startDate: string): ScheduleResult {
+export function updateConfig(startDate: string, projectId: string = DEFAULT_PROJECT_ID): ScheduleResult {
   repo.updateProjectConfig({ startDate });
-  return getFullSchedule();
+  return getFullSchedule(projectId);
+}
+
+export function getProjectHealth(projectId: string = DEFAULT_PROJECT_ID): ProjectHealth {
+  const schedule = getFullSchedule(projectId);
+  const project = projectRepo.getProjectById(projectId);
+  const today = new Date().toISOString().split('T')[0];
+  
+  let completedTasks = 0;
+  let overdueTasks = 0;
+  let totalDelayDays = 0;
+  let totalProgress = 0;
+  let criticalCompleted = 0;
+  let criticalTotal = 0;
+  
+  for (const task of schedule.tasks) {
+    const progress = task.progress || 0;
+    totalProgress += progress;
+    
+    if (progress >= 100) {
+      completedTasks++;
+    }
+    
+    if (progress < 100 && task.endDate < today) {
+      overdueTasks++;
+      const delayMs = new Date(today).getTime() - new Date(task.endDate).getTime();
+      totalDelayDays += Math.ceil(delayMs / (1000 * 60 * 60 * 24));
+    }
+    
+    if (task.isCritical) {
+      criticalTotal++;
+      if (progress >= 100) {
+        criticalCompleted++;
+      }
+    }
+  }
+  
+  const totalTasks = schedule.tasks.length;
+  const onTimeCompletionRate = totalTasks > 0 ? (completedTasks / (completedTasks + overdueTasks) * 100) : 100;
+  const averageDelayDays = overdueTasks > 0 ? totalDelayDays / overdueTasks : 0;
+  const criticalPathCompletion = criticalTotal > 0 ? (criticalCompleted / criticalTotal * 100) : 100;
+  const overallProgress = totalTasks > 0 ? totalProgress / totalTasks : 0;
+  
+  return {
+    projectId,
+    projectName: project?.name || '默认项目',
+    onTimeCompletionRate: Math.round(onTimeCompletionRate * 100) / 100,
+    averageDelayDays: Math.round(averageDelayDays * 100) / 100,
+    criticalPathCompletion: Math.round(criticalPathCompletion * 100) / 100,
+    totalTasks,
+    completedTasks,
+    overdueTasks,
+    progress: Math.round(overallProgress * 100) / 100,
+  };
 }
 
 function generateTempId(existing: { id: string }[]): string {

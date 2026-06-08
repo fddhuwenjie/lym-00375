@@ -10,12 +10,13 @@ interface TaskEditModalProps {
 }
 
 export function TaskEditModal({ task, isOpen, onClose }: TaskEditModalProps) {
-  const { tasks, createTask, updateTask } = useStore();
+  const { tasks, projects, calendars, createTask, updateTask } = useStore();
   const [formData, setFormData] = useState<TaskInput>({
     name: '',
     duration: 1,
     assignee: '',
     dependsOn: [],
+    progress: 0,
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +32,11 @@ export function TaskEditModal({ task, isOpen, onClose }: TaskEditModalProps) {
         assignee: task.assignee,
         dependsOn: [...task.dependsOn],
         manualStart: task.manualStart,
+        progress: task.progress,
+        actualStartDate: task.actualStartDate,
+        actualEndDate: task.actualEndDate,
+        projectId: task.projectId,
+        calendarId: task.calendarId,
       });
     } else {
       setFormData({
@@ -38,10 +44,12 @@ export function TaskEditModal({ task, isOpen, onClose }: TaskEditModalProps) {
         duration: 1,
         assignee: '',
         dependsOn: [],
+        progress: 0,
+        projectId: projects[0]?.id,
       });
     }
     setError(null);
-  }, [task, isOpen]);
+  }, [task, isOpen, projects]);
 
   if (!isOpen) return null;
 
@@ -226,6 +234,87 @@ export function TaskEditModal({ task, isOpen, onClose }: TaskEditModalProps) {
             <p className="text-xs text-primary-400 mt-1">
               点击选择/取消前置任务，添加时会自动检测循环依赖
             </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-primary-200 mb-1.5">
+                所属项目
+              </label>
+              <select
+                value={formData.projectId || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
+                className="w-full bg-primary-900/50 border border-primary-400/30 rounded px-3 py-2 text-white focus:outline-none focus:border-primary-400"
+              >
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary-200 mb-1.5">
+                进度 (%)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={formData.progress || 0}
+                  onChange={(e) => setFormData(prev => ({ ...prev, progress: parseInt(e.target.value) }))}
+                  className="flex-1 h-2 bg-primary-700 rounded-lg appearance-none cursor-pointer accent-normal-500"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.progress || 0}
+                  onChange={(e) => setFormData(prev => ({ ...prev, progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                  className="w-16 bg-primary-900/50 border border-primary-400/30 rounded px-2 py-1 text-white text-center focus:outline-none focus:border-primary-400"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-primary-200 mb-1.5">
+                实际开始日期
+              </label>
+              <input
+                type="date"
+                value={formData.actualStartDate || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, actualStartDate: e.target.value || undefined }))}
+                className="w-full bg-primary-900/50 border border-primary-400/30 rounded px-3 py-2 text-white focus:outline-none focus:border-primary-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary-200 mb-1.5">
+                实际完成日期
+              </label>
+              <input
+                type="date"
+                value={formData.actualEndDate || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, actualEndDate: e.target.value || undefined }))}
+                className="w-full bg-primary-900/50 border border-primary-400/30 rounded px-3 py-2 text-white focus:outline-none focus:border-primary-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-primary-200 mb-1.5">
+              覆盖日历
+            </label>
+            <select
+              value={formData.calendarId || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, calendarId: e.target.value || undefined }))}
+              className="w-full bg-primary-900/50 border border-primary-400/30 rounded px-3 py-2 text-white focus:outline-none focus:border-primary-400"
+            >
+              <option value="">使用项目默认日历</option>
+              {calendars.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

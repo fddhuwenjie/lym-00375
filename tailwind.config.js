@@ -41,6 +41,14 @@ export default {
           500: '#f59e0b',
           600: '#d97706',
         },
+        overdue: {
+          50: '#fef2f2',
+          100: '#fee2e2',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          900: '#7f1d1d',
+        },
       },
       fontFamily: {
         display: ['"Playfair Display"', 'serif'],
