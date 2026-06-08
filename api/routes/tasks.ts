@@ -24,6 +24,9 @@ router.post('/', (req, res) => {
     if (err.cyclePath) {
       return res.status(400).json({ error: err.message, cyclePath: err.cyclePath });
     }
+    if (err.invalidDependencies) {
+      return res.status(400).json({ error: err.message, invalidDependencies: err.invalidDependencies });
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -43,6 +46,9 @@ router.put('/:id', (req, res) => {
   } catch (err: any) {
     if (err.cyclePath) {
       return res.status(400).json({ error: err.message, cyclePath: err.cyclePath });
+    }
+    if (err.invalidDependencies) {
+      return res.status(400).json({ error: err.message, invalidDependencies: err.invalidDependencies });
     }
     res.status(500).json({ error: err.message });
   }

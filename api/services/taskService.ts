@@ -8,10 +8,30 @@ export function getFullSchedule(): ScheduleResult {
   return computeSchedule(tasks, config.startDate);
 }
 
+function validateDependencies(dependsOn: string[], existingTaskIds: string[], currentTaskId?: string): { invalidIds: string[] } {
+  const invalidIds: string[] = [];
+  for (const depId of dependsOn) {
+    if (depId === currentTaskId) continue;
+    if (!existingTaskIds.includes(depId)) {
+      invalidIds.push(depId);
+    }
+  }
+  return { invalidIds };
+}
+
 export function createTask(input: TaskInput): ScheduleResult {
   const existingTasks = repo.getAllTasks();
+  const existingIds = existingTasks.map(t => t.id);
   
   const id = input.id || generateTempId(existingTasks);
+
+  const depValidation = validateDependencies(input.dependsOn, existingIds, id);
+  if (depValidation.invalidIds.length > 0) {
+    const error = new Error(`依赖任务不存在: ${depValidation.invalidIds.join(', ')}`);
+    (error as any).invalidDependencies = depValidation.invalidIds;
+    throw error;
+  }
+  
   const cycleResult = detectCycle(existingTasks, id, input.dependsOn);
   
   if (cycleResult.hasCycle) {
@@ -25,7 +45,16 @@ export function createTask(input: TaskInput): ScheduleResult {
 }
 
 export function updateTask(id: string, input: TaskInput): ScheduleResult {
-  const existingTasks = repo.getAllTasks().filter(t => t.id !== id);
+  const allTasks = repo.getAllTasks();
+  const existingTasks = allTasks.filter(t => t.id !== id);
+  const existingIds = allTasks.map(t => t.id);
+  
+  const depValidation = validateDependencies(input.dependsOn, existingIds, id);
+  if (depValidation.invalidIds.length > 0) {
+    const error = new Error(`依赖任务不存在: ${depValidation.invalidIds.join(', ')}`);
+    (error as any).invalidDependencies = depValidation.invalidIds;
+    throw error;
+  }
   
   const cycleResult = detectCycle(existingTasks, id, input.dependsOn);
   
