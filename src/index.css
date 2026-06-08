@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.6;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a1422 0%, #172d4a 50%, #0f1e33 100%);
+  color: #e2e8f0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #172d4a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4f7eab;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2d5d8c;
+}
+
+/* Table styles */
+.task-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.task-table th,
+.task-table td {
+  border-bottom: 1px solid rgba(79, 126, 171, 0.2);
+}
+
+/* Gantt styles */
+.gantt-bar {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.gantt-bar:hover {
+  filter: brightness(1.2);
+}
+
+.gantt-bar.dragging {
+  opacity: 0.7;
+  cursor: grabbing;
+}
+
+.gantt-grid-line {
+  stroke: rgba(79, 126, 171, 0.15);
+  stroke-width: 1;
+}
+
+.gantt-axis-line {
+  stroke: rgba(79, 126, 171, 0.4);
+  stroke-width: 1;
+}
+
+.gantt-today-line {
+  stroke: #10b981;
+  stroke-width: 2;
+  stroke-dasharray: 6, 4;
+}
+
+.gantt-dependency-line {
+  fill: none;
+  stroke: rgba(79, 126, 171, 0.5);
+  stroke-width: 1.5;
+}
+
+.gantt-dependency-line.critical {
+  stroke: #dc2626;
+}
